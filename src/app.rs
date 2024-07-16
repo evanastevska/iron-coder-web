@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(PartialEq)]
 enum Page {
     Home,
-    AboutPage,
+    About,
     Login,
 }
 
@@ -141,15 +141,14 @@ impl eframe::App for TemplateApp {
                     ui.separator();
 
                     //About Iron Coder and GitHub link buttons
-                    ui.horizontal(|ui| {
-                        if ui.button("GitHub").clicked() {
-                            open::that("https://github.com/shulltronics/iron-coder.git").expect("Failed to open URL");
-                        }
+                    ui.horizontal(|ui| {/*  */
+
+                        ui.hyperlink_to("GitHub", "https://github.com/shulltronics/iron-coder.git");
 
                         ui.add_space(10.0);
 
                         if ui.button("About Iron Coder").clicked() {
-                            self.current_page = Page::AboutPage;
+                            self.current_page = Page::About;
                         }
                     });
 
@@ -166,7 +165,7 @@ impl eframe::App for TemplateApp {
                     });
                 }
                 //Contains description of Iron Coder
-                Page::AboutPage => {
+                Page::About => {
                     ui.with_layout(egui::Layout::top_down(Align::Center), |ui| {
                         ui.heading("About Iron Coder");
                     });
