@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64-apple-darwin, arm-unknown-linux-musleabihf, armv7-unknown-linux-musleabihf, x86_64-unknown-linux-musl, aarch64-apple-darwin]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: ${{ matrix.target }}
+        components: rustfmt, clippy
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential gcc-multilib
+        if [[ "${{ matrix.target }}" == "x86_64-apple-darwin" || "${{ matrix.target }}" == "aarch64-apple-darwin" ]]; then
+          sudo apt-get install -y llvm clang
+        elif [[ "${{ matrix.target }}" == "arm-unknown-linux-musleabihf" || "${{ matrix.target }}" == "armv7-unknown-linux-musleabihf" ]]; then
+          sudo apt-get install -y musl-tools gcc-arm-linux-gnueabihf qemu-user-static
+        elif [[ "${{ matrix.target }}" == "x86_64-unknown-linux-musl" ]]; then
+          sudo apt-get install -y musl-tools qemu-user-static
+        fi
+        rustup target add ${{ matrix.target }}
+
+    - name: Build
+      run: cargo build --release --target ${{ matrix.target }}
+
+    - name: Test
+      run: cargo test --target ${{ matrix.target }}
+
+    - name: Package binary
+      run: |
+        mkdir -p dist
+        cp target/${{ matrix.target }}/release/eframe_template dist/eframe_template-${{ matrix.target }}
+
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target: [x86_64-apple-darwin, aarch64-apple-darwin]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: ${{ matrix.target }}
+        components: rustfmt, clippy
+
+    - name: Install dependencies
+      run: |
+        brew install llvm
+        rustup target add ${{ matrix.target }}
+        echo 'export PATH="/usr/local/opt/llvm/bin:$PATH"' >> $GITHUB_ENV
+
+    - name: Build
+      run: cargo build --release --target ${{ matrix.target }}
+
+    - name: Test
+      run: cargo test --target ${{ matrix.target }}
+
+    - name: Package binary
+      run: |
+        mkdir -p dist
+        cp target/${{ matrix.target }}/release/eframe_template dist/eframe_template-${{ matrix.target }}
+
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        target: [x86_64-pc-windows-msvc]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: ${{ matrix.target }}
+        components: rustfmt, clippy
+
+    - name: Install dependencies
+      run: |
+        choco install llvm
+        rustup target add ${{ matrix.target }}
+        echo 'C:\Program Files\LLVM\bin' >> $GITHUB_PATH
+
+    - name: Build
+      run: cargo build --release --target ${{ matrix.target }}
+
+    - name: Test
+      run: cargo test --target ${{ matrix.target }}
+
+    - name: Package binary
+      run: |
+        mkdir -p dist
+        cp target/${{ matrix.target }}/release/eframe_template.exe dist/eframe_template-${{ matrix.target }}.exe
